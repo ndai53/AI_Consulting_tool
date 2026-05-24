@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIコンサル 壁打ちツール</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:    #2E5F8A;
+      --primary-lt: #D5E8F0;
+      --accent:     #F4A020;
+      --success:    #3A9E6A;
+      --danger:     #CC3333;
+      --bg:         #F7F9FC;
+      --surface:    #FFFFFF;
+      --border:     #CCCCCC;
+      --text:       #1A1A2E;
+      --text-muted: #666666;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; }
+    .container { max-width: 760px; margin: 0 auto; }
+
+    /* Stepper */
+    .stepper { display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+    .step-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px; background: var(--border); color: var(--text-muted); transition: background 0.3s, color 0.3s; flex-shrink: 0; }
+    .step-dot.active    { background: var(--primary); color: #fff; }
+    .step-dot.completed { background: var(--success);  color: #fff; font-size: 0; }
+    .step-dot.completed::after { content: '✓'; font-size: 14px; }
+    .step-line { flex: 1; height: 3px; background: var(--border); max-width: 64px; transition: background 0.3s; }
+    .step-line.completed { background: var(--success); }
+
+    /* Card */
+    .card { background: var(--surface); border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); padding: 36px 40px; margin-bottom: 24px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .step-label { font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; color: var(--primary); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+    .card h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; line-height: 1.4; }
+    .card .sub { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; line-height: 1.7; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 28px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; font-family: 'Noto Sans JP', sans-serif; }
+    .btn-back { background: transparent; color: var(--text-muted); border: 1.5px solid var(--border); }
+    .btn-back:hover { background: var(--primary-lt); border-color: var(--primary); color: var(--primary); }
+    .btn-next { background: var(--accent); color: #fff; margin-left: auto; }
+    .btn-next:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(244,160,32,0.45); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(46,95,138,0.4); }
+    .btn-success { background: var(--success); color: #fff; margin-left: auto; }
+    .btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(58,158,106,0.4); }
+    .btn-lg { width: 100%; padding: 16px; font-size: 17px; border-radius: 10px; }
+    .nav-buttons { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+    /* Welcome */
+    .welcome-hero { text-align: center; padding: 48px 24px 36px; }
+    .welcome-hero .hero-icon { font-size: 72px; margin-bottom: 24px; display: block; }
+    .welcome-hero h1 { font-size: 30px; font-weight: 700; line-height: 1.4; margin-bottom: 16px; }
+    .welcome-hero .desc { color: var(--text-muted); font-size: 16px; line-height: 1.9; margin-bottom: 32px; }
+    .feature-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px; text-align: left; }
+    .feature-item { display: flex; align-items: center; gap: 12px; background: var(--primary-lt); border-radius: 8px; padding: 12px 16px; font-size: 14px; font-weight: 500; }
+    .feature-item .fi-icon { font-size: 18px; flex-shrink: 0; }
+    .feature-item .fi-num { margin-left: auto; font-family: 'Montserrat', sans-serif; font-size: 11px; color: var(--primary); font-weight: 700; }
+    .welcome-note { margin-top: 16px; font-size: 12px; color: var(--text-muted); line-height: 1.8; }
+
+    /* Steps */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+
+    /* Question cards */
+    .q-card { margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--bg); }
+    .q-card:last-child { border-bottom: none; margin-bottom: 0; }
+    .q-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .q-number { font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; color: var(--primary); background: var(--primary-lt); padding: 3px 9px; border-radius: 12px; letter-spacing: 0.05em; flex-shrink: 0; margin-top: 2px; }
+    .q-label { font-size: 15px; font-weight: 600; line-height: 1.5; flex: 1; }
+    .q-required { font-size: 11px; color: var(--danger); font-weight: 600; flex-shrink: 0; margin-top: 3px; }
+    .q-optional { font-size: 11px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; margin-top: 3px; }
+    .q-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.6; }
+
+    /* Inputs */
+    .q-input, .q-select, .q-textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-size: 15px; font-family: 'Noto Sans JP', sans-serif; color: var(--text); background: #fff; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+    .q-input:focus, .q-select:focus, .q-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46,95,138,0.12); }
+    .q-input.error, .q-select.error, .q-textarea.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(204,51,51,0.1); }
+    .q-textarea { resize: vertical; min-height: 88px; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 6px; display: none; }
+    .error-msg.visible { display: block; }
+
+    /* Radio */
+    .radio-group { display: flex; flex-direction: column; gap: 8px; }
+    .radio-group.rg-error { outline: 2px solid var(--danger); border-radius: 8px; }
+    .radio-option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-size: 14px; user-select: none; }
+    .radio-option:hover { border-color: var(--primary); background: var(--primary-lt); }
+    .radio-option.selected { border-color: var(--primary); background: var(--primary-lt); }
+    .radio-option input[type="radio"] { accent-color: var(--primary); width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Checkbox */
+    .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+    .checkbox-group.cg-error { outline: 2px solid var(--danger); border-radius: 8px; }
+    .checkbox-option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-size: 14px; user-select: none; }
+    .checkbox-option:hover { border-color: var(--primary); background: var(--primary-lt); }
+    .checkbox-option.checked { border-color: var(--primary); background: var(--primary-lt); }
+    .checkbox-option input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Conditional */
+    .conditional { display: none; margin-top: 10px; padding: 14px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--primary); }
+    .conditional.visible { display: block; }
+
+    /* Confirmation */
+    .confirm-section { margin-bottom: 28px; }
+    .confirm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--primary-lt); }
+    .confirm-header h3 { font-size: 14px; font-weight: 700; color: var(--primary); }
+    .confirm-edit-btn { font-size: 12px; color: var(--primary); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: 'Noto Sans JP', sans-serif; padding: 2px 6px; }
+    .confirm-edit-btn:hover { color: var(--accent); }
+    .confirm-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bg); font-size: 14px; line-height: 1.6; }
+    .confirm-row:last-child { border-bottom: none; }
+    .confirm-key { color: var(--text-muted); flex-shrink: 0; width: 140px; }
+    .confirm-val { font-weight: 500; flex: 1; white-space: pre-wrap; }
+    .confirm-val.empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 24px; border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 9999; animation: fadeIn 0.2s ease; }
+
+    /* Result tabs */
+    .result-tabs { display:flex; gap:4px; flex-wrap:wrap; border-bottom:2px solid var(--border); margin-bottom:20px; overflow-x:auto; padding-bottom:0; }
+    .tab { padding:8px 14px; border:none; background:none; font-weight:600; font-size:13px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:'Noto Sans JP',sans-serif; transition:color 0.2s,border-color 0.2s; }
+    .tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+    .tab:hover { color:var(--primary); }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; animation:fadeIn 0.25s ease; }
+    .copy-block { position:relative; margin-bottom:16px; }
+    .copy-block pre { background:var(--bg); border-radius:8px; padding:20px 20px 20px 20px; font-family:'Noto Sans JP',sans-serif; font-size:13px; line-height:1.9; white-space:pre-wrap; word-break:break-all; border:1px solid var(--border); max-height:480px; overflow-y:auto; }
+    .btn-copy { position:absolute; top:10px; right:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:background 0.2s,border-color 0.2s,color 0.2s; }
+    .btn-copy:hover { background:var(--primary-lt); border-color:var(--primary); color:var(--primary); }
+    .result-hint { font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.7; background:var(--primary-lt); padding:10px 14px; border-radius:8px; }
+
+    /* Footer */
+    .footer { text-align: center; margin-top: 40px; padding-bottom: 48px; }
+    .btn-reset { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline; font-family: 'Noto Sans JP', sans-serif; padding: 4px 8px; }
+    .btn-reset:hover { color: var(--danger); }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .card { padding: 24px 20px; }
+      .welcome-hero { padding: 32px 8px 28px; }
+      .welcome-hero h1 { font-size: 24px; }
+      .step-dot { width: 28px; height: 28px; font-size: 11px; }
+      .step-line { max-width: 36px; }
+      .btn { font-size: 14px; padding: 11px 20px; }
+      .confirm-key { width: 110px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Stepper -->
+  <div class="stepper" id="stepper" style="display:none">
+    <div class="step-dot" id="dot-1">1</div><div class="step-line" id="line-1"></div>
+    <div class="step-dot" id="dot-2">2</div><div class="step-line" id="line-2"></div>
+    <div class="step-dot" id="dot-3">3</div><div class="step-line" id="line-3"></div>
+    <div class="step-dot" id="dot-4">4</div><div class="step-line" id="line-4"></div>
+    <div class="step-dot" id="dot-5">5</div><div class="step-line" id="line-5"></div>
+    <div class="step-dot" id="dot-6">6</div>
+  </div>
+
+  <!-- STEP 0: Welcome -->
+  <div class="step-panel active" id="step-0">
+    <div class="card welcome-hero">
+      <span class="hero-icon">🤝</span>
+      <h1>AIコンサル<br>壁打ちツール</h1>
+      <p class="desc">19問に答えるだけで、<br>AIコンサルの営業準備が<strong>全部そろいます。</strong></p>
+      <div class="feature-grid">
+        <div class="feature-item"><span class="fi-icon">📝</span>プロフィール文（SNS・名刺・LP用）<span class="fi-num">①</span></div>
+        <div class="feature-item"><span class="fi-icon">💰</span>サービスメニュー＆単価表<span class="fi-num">②</span></div>
+        <div class="feature-item"><span class="fi-icon">📣</span>営業チャネル計画（1ヶ月行動計画）<span class="fi-num">③</span></div>
+        <div class="feature-item"><span class="fi-icon">✉️</span>アプローチ文（4パターン）<span class="fi-num">④</span></div>
+        <div class="feature-item"><span class="fi-icon">💬</span>面談トークスクリプト<span class="fi-num">⑤</span></div>
+        <div class="feature-item"><span class="fi-icon">📄</span>見積書雛形<span class="fi-num">⑥</span></div>
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="goToStep(1)">はじめる →</button>
+      <p class="welcome-note">所要時間：約5〜8分 ／ 登録不要 ／ サーバー不要<br>入力データはこのブラウザにのみ保存されます</p>
+    </div>
+  </div>
+
+  <!-- STEP 1: 基本情報 -->
+  <div class="step-panel" id="step-1">
+    <div class="card">
+      <div class="step-label">STEP 1 of 6 — 基本情報</div>
+      <h2>あなたの基本情報を<br>教えてください</h2>
+      <p class="sub">Q1〜Q5 ／ すべて必須項目です</p>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q1</span><label class="q-label" for="name">お名前を教えてください</label><span class="q-required">必須</span></div>
+        <p class="q-hint">ニックネームでもOKです</p>
+        <input type="text" class="q-input" id="name" placeholder="例：田中 一郎">
+        <div class="error-msg" id="err-name">お名前を入力してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q2</span><label class="q-label" for="age_range">年齢を教えてください</label><span class="q-required">必須</span></div>
+        <select class="q-select" id="age_range">
+          <option value="">-- 選択してください --</option>
+          <option value="20代">20代</option><option value="30代">30代</option>
+          <option value="40代">40代</option><option value="50代">50代</option>
+          <option value="60代以上">60代以上</option>
+        </select>
+        <div class="error-msg" id="err-age_range">年齢を選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q3</span><label class="q-label" for="current_job">現在のメインのお仕事は？</label><span class="q-required">必須</span></div>
+        <p class="q-hint">例：会社員・フリーランス・自営業 など</p>
+        <input type="text" class="q-input" id="current_job" placeholder="例：会社員（営業職）">
+        <div class="error-msg" id="err-current_job">現在のお仕事を入力してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q4</span><label class="q-label" for="motivation">AIコンサルを始めようと思ったきっかけは？</label><span class="q-required">必須</span></div>
+        <textarea class="q-textarea" id="motivation" placeholder="例：副業で収入を増やしたい。AIに興味があり、自分のスキルを活かせると思った。"></textarea>
+        <div class="error-msg" id="err-motivation">きっかけを入力してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q5</span><label class="q-label" for="income_goal">月にどのくらい稼ぎたいですか？（最初の3ヶ月の目標）</label><span class="q-required">必須</span></div>
+        <select class="q-select" id="income_goal">
+          <option value="">-- 選択してください --</option>
+          <option value="5万円以下">5万円以下</option><option value="5〜10万円">5〜10万円</option>
+          <option value="10〜30万円">10〜30万円</option><option value="30万円以上">30万円以上</option>
+        </select>
+        <div class="error-msg" id="err-income_goal">収入目標を選択してください</div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-back" onclick="goToStep(0)">← 戻る</button>
+        <button class="btn btn-next" onclick="goToStep(2)">次へ →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: 職歴・経験 -->
+  <div class="step-panel" id="step-2">
+    <div class="card">
+      <div class="step-label">STEP 2 of 6 — 職歴・経験</div>
+      <h2>これまでの職歴・<br>経験を教えてください</h2>
+      <p class="sub">Q6〜Q11 ／ Q10のみ任意</p>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q6</span><label class="q-label" for="work_history">これまでの職歴・業種を教えてください（複数OK）</label><span class="q-required">必須</span></div>
+        <p class="q-hint">例：飲食店経営10年・営業職5年</p>
+        <textarea class="q-textarea" id="work_history" placeholder="例：学生時代にアルバイト5年。新卒から現職の営業職18年。"></textarea>
+        <div class="error-msg" id="err-work_history">職歴・業種を入力してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q7</span><span class="q-label">経営・マネジメント経験はありますか？</span><span class="q-required">必須</span></div>
+        <div class="radio-group" id="rg-management_exp">
+          <label class="radio-option"><input type="radio" name="management_exp" value="あり" onchange="onRadioChange('management_exp',this.value)">あり</label>
+          <label class="radio-option"><input type="radio" name="management_exp" value="なし" onchange="onRadioChange('management_exp',this.value)">なし</label>
+        </div>
+        <div class="conditional" id="cond-management_exp">
+          <p class="q-hint">何年・何人規模でしたか？</p>
+          <input type="text" class="q-input" id="management_detail" placeholder="例：部下3名のチームリーダーを5年">
+        </div>
+        <div class="error-msg" id="err-management_exp">いずれかを選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q8</span><span class="q-label">教える・指導した経験はありますか？</span><span class="q-required">必須</span></div>
+        <div class="radio-group" id="rg-teaching_exp">
+          <label class="radio-option"><input type="radio" name="teaching_exp" value="あり" onchange="onRadioChange('teaching_exp',this.value)">あり</label>
+          <label class="radio-option"><input type="radio" name="teaching_exp" value="なし" onchange="onRadioChange('teaching_exp',this.value)">なし</label>
+        </div>
+        <div class="conditional" id="cond-teaching_exp">
+          <p class="q-hint">どんな場面で教えましたか？</p>
+          <input type="text" class="q-input" id="teaching_detail" placeholder="例：新人・後輩への営業同行・OJTを10年以上担当">
+        </div>
+        <div class="error-msg" id="err-teaching_exp">いずれかを選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q9</span><span class="q-label">お客様と直接関わる仕事の経験はありますか？</span><span class="q-required">必須</span></div>
+        <div class="radio-group" id="rg-customer_exp">
+          <label class="radio-option"><input type="radio" name="customer_exp" value="あり" onchange="onRadioChange('customer_exp',this.value)">あり</label>
+          <label class="radio-option"><input type="radio" name="customer_exp" value="なし" onchange="onRadioChange('customer_exp',this.value)">なし</label>
+        </div>
+        <div class="conditional" id="cond-customer_exp">
+          <p class="q-hint">何年・どんなお仕事ですか？</p>
+          <input type="text" class="q-input" id="customer_detail" placeholder="例：営業職18年・学生時代の接客バイト5年">
+        </div>
+        <div class="error-msg" id="err-customer_exp">いずれかを選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q10</span><label class="q-label" for="episode">現場での「困りごとを解決した」エピソードがあれば</label><span class="q-optional">任意</span></div>
+        <p class="q-hint">例：スタッフの作業ミスを仕組みで減らした</p>
+        <textarea class="q-textarea" id="episode" placeholder="例：お客様のクレームを丁寧にヒアリングして解決し、継続契約につなげた"></textarea>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q11</span><label class="q-label" for="pride">自分が「誇れる経験」を一言で表すとしたら？</label><span class="q-required">必須</span></div>
+        <p class="q-hint">例：「現場を20年知り尽くした」</p>
+        <input type="text" class="q-input" id="pride" placeholder="例：人の話を引き出して課題を整理するのが得意">
+        <div class="error-msg" id="err-pride">誇れる経験を入力してください</div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-back" onclick="goToStep(1)">← 戻る</button>
+        <button class="btn btn-next" onclick="goToStep(3)">次へ →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: スキル -->
+  <div class="step-panel" id="step-3">
+    <div class="card">
+      <div class="step-label">STEP 3 of 6 — スキル</div>
+      <h2>あなたのスキルを<br>教えてください</h2>
+      <p class="sub">Q12〜Q15 ／ すべて必須項目です</p>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q12</span><label class="q-label" for="pc_skill">PCスキルのレベルを教えてください</label><span class="q-required">必須</span></div>
+        <select class="q-select" id="pc_skill">
+          <option value="">-- 選択してください --</option>
+          <option value="ほぼ使わない">ほぼ使わない</option>
+          <option value="メールとExcelくらい">メールとExcelくらい</option>
+          <option value="業務で普通に使う">業務で普通に使う</option>
+          <option value="プログラミングもできる">プログラミングもできる</option>
+        </select>
+        <div class="error-msg" id="err-pc_skill">PCスキルを選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q13</span><span class="q-label">現在使えるITツール・スキル（あてはまるもの全部）</span><span class="q-required">必須</span></div>
+        <div class="checkbox-group" id="cg-it_skills">
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="Excel" onchange="onCheckChange(this)">Excel</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="Word" onchange="onCheckChange(this)">Word</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="PowerPoint" onchange="onCheckChange(this)">PowerPoint</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="ChatGPT" onchange="onCheckChange(this)">ChatGPT</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="Canva" onchange="onCheckChange(this)">Canva</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="HP制作" onchange="onCheckChange(this)">HP制作</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="プログラミング" onchange="onCheckChange(this)">プログラミング</label>
+          <label class="checkbox-option"><input type="checkbox" name="it_skills" value="その他" onchange="onCheckChange(this)">その他</label>
+        </div>
+        <div class="error-msg" id="err-it_skills">1つ以上選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q14</span><label class="q-label" for="ai_skill">AIツールの使用経験を教えてください</label><span class="q-required">必須</span></div>
+        <select class="q-select" id="ai_skill">
+          <option value="">-- 選択してください --</option>
+          <option value="全く使ったことがない">全く使ったことがない</option>
+          <option value="少し使ったことがある">少し使ったことがある</option>
+          <option value="業務で使っている">業務で使っている</option>
+          <option value="人に教えられる">人に教えられる</option>
+        </select>
+        <div class="error-msg" id="err-ai_skill">AIツールの経験を選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q15</span><label class="q-label" for="top_skill">あなたが「一番得意だ」と感じるスキルは？</label><span class="q-required">必須</span></div>
+        <p class="q-hint">例：「人の話を聞いてまとめること」「わかりやすく説明すること」</p>
+        <input type="text" class="q-input" id="top_skill" placeholder="例：お客様の話をよく聞いて、分かりやすく説明すること">
+        <div class="error-msg" id="err-top_skill">得意なスキルを入力してください</div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-back" onclick="goToStep(2)">← 戻る</button>
+        <button class="btn btn-next" onclick="goToStep(4)">次へ →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: 営業方針 -->
+  <div class="step-panel" id="step-4">
+    <div class="card">
+      <div class="step-label">STEP 4 of 6 — 営業方針</div>
+      <h2>営業の方針を<br>教えてください</h2>
+      <p class="sub">Q16〜Q19 ／ Q19のみ任意</p>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q16</span><span class="q-label">最初に狙いたいターゲットはどれですか？（複数OK）</span><span class="q-required">必須</span></div>
+        <div class="checkbox-group" id="cg-target">
+          <label class="checkbox-option"><input type="checkbox" name="target" value="個人事業主・小規模店舗" onchange="onCheckChange(this);onTargetChange()">個人事業主・小規模店舗</label>
+          <label class="checkbox-option"><input type="checkbox" name="target" value="中小企業（5〜50名）" onchange="onCheckChange(this);onTargetChange()">中小企業（5〜50名）</label>
+          <label class="checkbox-option"><input type="checkbox" name="target" value="大企業の部署単位" onchange="onCheckChange(this);onTargetChange()">大企業の部署単位</label>
+          <label class="checkbox-option"><input type="checkbox" name="target" value="業種を指定したい" onchange="onCheckChange(this);onTargetChange()">業種を指定したい</label>
+        </div>
+        <div class="conditional" id="cond-target_industry">
+          <p class="q-hint">狙いたい業種を教えてください</p>
+          <input type="text" class="q-input" id="target_industry" placeholder="例：飲食店・美容室・整体院">
+        </div>
+        <div class="error-msg" id="err-target">1つ以上選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q17</span><label class="q-label" for="sales_time">営業にかけられる時間は週どのくらいですか？</label><span class="q-required">必須</span></div>
+        <select class="q-select" id="sales_time">
+          <option value="">-- 選択してください --</option>
+          <option value="週1〜2時間">週1〜2時間</option>
+          <option value="週3〜5時間">週3〜5時間</option>
+          <option value="週10時間以上">週10時間以上</option>
+          <option value="ほぼフルタイムで動ける">ほぼフルタイムで動ける</option>
+        </select>
+        <div class="error-msg" id="err-sales_time">稼働時間を選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q18</span><span class="q-label">最初に使いたい営業チャネルはどれですか？（複数OK）</span><span class="q-required">必須</span></div>
+        <div class="checkbox-group" id="cg-channels">
+          <label class="checkbox-option"><input type="checkbox" name="channels" value="知人・紹介" onchange="onCheckChange(this)">知人・紹介</label>
+          <label class="checkbox-option"><input type="checkbox" name="channels" value="ランサーズ・ココナラ" onchange="onCheckChange(this)">ランサーズ・ココナラ</label>
+          <label class="checkbox-option"><input type="checkbox" name="channels" value="SNS発信" onchange="onCheckChange(this)">SNS発信</label>
+          <label class="checkbox-option"><input type="checkbox" name="channels" value="飛び込み・電話" onchange="onCheckChange(this)">飛び込み・電話</label>
+          <label class="checkbox-option"><input type="checkbox" name="channels" value="その他" onchange="onCheckChange(this)">その他</label>
+        </div>
+        <div class="error-msg" id="err-channels">1つ以上選択してください</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-header"><span class="q-number">Q19</span><label class="q-label" for="anxiety">今一番不安に思っていることは？</label><span class="q-optional">任意</span></div>
+        <textarea class="q-textarea" id="anxiety" placeholder="例：実績がないので信用してもらえるか不安。そもそも自分に何が教えられるか自信がない。"></textarea>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-back" onclick="goToStep(3)">← 戻る</button>
+        <button class="btn btn-next" onclick="goToStep(5)">確認へ →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: 確認 -->
+  <div class="step-panel" id="step-5">
+    <div class="card">
+      <div class="step-label">STEP 5 of 6 — 確認</div>
+      <h2>入力内容を<br>確認してください</h2>
+      <p class="sub">修正したい箇所は各セクションの「修正する」ボタンで戻れます</p>
+      <div id="confirm-content"></div>
+      <div class="nav-buttons">
+        <button class="btn btn-back" onclick="goToStep(4)">← 戻る</button>
+        <button class="btn btn-success" onclick="goToStep(6)">生成する ✨</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6: 成果物 -->
+  <div class="step-panel" id="step-6">
+    <div class="card">
+      <div class="step-label">STEP 6 of 6 — 完成</div>
+      <h2>営業準備が完成しました！</h2>
+      <p class="sub">タブを切り替えてコピーし、そのままお使いください</p>
+
+      <div class="result-tabs">
+        <button class="tab active" onclick="switchTab('profile')">① プロフィール</button>
+        <button class="tab" onclick="switchTab('menu')">② メニュー</button>
+        <button class="tab" onclick="switchTab('channel')">③ チャネル計画</button>
+        <button class="tab" onclick="switchTab('approach')">④ アプローチ文</button>
+        <button class="tab" onclick="switchTab('meeting')">⑤ 面談トーク</button>
+        <button class="tab" onclick="switchTab('estimate')">⑥ 見積書</button>
+      </div>
+
+      <div class="tab-panel active" id="panel-profile">
+        <p class="result-hint">📝 SNS・名刺・LP用プロフィール。経歴に合ったパターンを選んでお使いください。</p>
+        <div class="copy-block"><pre id="text-profile"></pre><button class="btn-copy" onclick="copyText('text-profile')">コピー</button></div>
+      </div>
+      <div class="tab-panel" id="panel-menu">
+        <p class="result-hint">💰 3段階の料金プランです。収入目標に合わせた価格帯を設定しています。</p>
+        <div class="copy-block"><pre id="text-menu"></pre><button class="btn-copy" onclick="copyText('text-menu')">コピー</button></div>
+      </div>
+      <div class="tab-panel" id="panel-channel">
+        <p class="result-hint">📣 選んだチャネルの優先順位と1ヶ月の行動計画です。</p>
+        <div class="copy-block"><pre id="text-channel"></pre><button class="btn-copy" onclick="copyText('text-channel')">コピー</button></div>
+      </div>
+      <div class="tab-panel" id="panel-approach">
+        <p class="result-hint">✉️ 各チャネル向けの初回アプローチ文です。</p>
+        <div class="copy-block"><pre id="text-approach"></pre><button class="btn-copy" onclick="copyText('text-approach')">コピー</button></div>
+      </div>
+      <div class="tab-panel" id="panel-meeting">
+        <p class="result-hint">💬 初回面談・オンライン商談で使えるトークスクリプトです。</p>
+        <div class="copy-block"><pre id="text-meeting"></pre><button class="btn-copy" onclick="copyText('text-meeting')">コピー</button></div>
+      </div>
+      <div class="tab-panel" id="panel-estimate">
+        <p class="result-hint">📄 初回提案時の見積書雛形です。【】内を書き換えてお使いください。</p>
+        <div class="copy-block"><pre id="text-estimate"></pre><button class="btn-copy" onclick="copyText('text-estimate')">コピー</button></div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-back" onclick="goToStep(5)">← 修正する</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" id="footer-reset" style="display:none">
+    <button class="btn-reset" onclick="confirmReset()">最初からやり直す</button>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  /* ── 状態 ─────────────────────────────── */
+  let currentStep = 0;
+  let data = {};
+
+  const REQUIRED = {
+    1: ['name','age_range','current_job','motivation','income_goal'],
+    2: ['work_history','management_exp','teaching_exp','customer_exp','pride'],
+    3: ['pc_skill','it_skills','ai_skill','top_skill'],
+    4: ['target','sales_time','channels'],
+  };
+
+  /* ── STEP遷移 ─────────────────────────── */
+  function goToStep(next) {
+    if (next > currentStep && currentStep >= 1 && currentStep <= 4) {
+      Object.assign(data, collectStepData(currentStep));
+      if (!validateStep(currentStep)) return;
+      saveProgress();
+    } else if (next < currentStep && currentStep >= 1 && currentStep <= 4) {
+      Object.assign(data, collectStepData(currentStep));
+      saveProgress();
+    }
+
+    document.getElementById('step-' + currentStep).classList.remove('active');
+    currentStep = next;
+    document.getElementById('step-' + currentStep).classList.add('active');
+
+    const show = next !== 0;
+    document.getElementById('stepper').style.display     = show ? 'flex'  : 'none';
+    document.getElementById('footer-reset').style.display = show ? 'block' : 'none';
+
+    updateStepper(next);
+    if (next === 5) renderConfirmation();
+    if (next === 6) generateAll();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── ステッパー ───────────────────────── */
+  function updateStepper(active) {
+    for (let i = 1; i <= 6; i++) {
+      const dot  = document.getElementById('dot-' + i);
+      const line = document.getElementById('line-' + i);
+      dot.className = 'step-dot';
+      if      (i < active)  dot.classList.add('completed');
+      else if (i === active) dot.classList.add('active');
+      if (line) { line.className = 'step-line'; if (i < active) line.classList.add('completed'); }
+    }
+  }
+
+  /* ── フォームヘルパー ─────────────────── */
+  function fval(id)       { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+  function radioVal(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : ''; }
+  function cbVals(name)   { return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(e => e.value); }
+
+  /* ── データ収集 ───────────────────────── */
+  function collectStepData(step) {
+    if (step === 1) return { name:fval('name'), age_range:fval('age_range'), current_job:fval('current_job'), motivation:fval('motivation'), income_goal:fval('income_goal') };
+    if (step === 2) return { work_history:fval('work_history'), management_exp:radioVal('management_exp'), management_detail:fval('management_detail'), teaching_exp:radioVal('teaching_exp'), teaching_detail:fval('teaching_detail'), customer_exp:radioVal('customer_exp'), customer_detail:fval('customer_detail'), episode:fval('episode'), pride:fval('pride') };
+    if (step === 3) return { pc_skill:fval('pc_skill'), it_skills:cbVals('it_skills'), ai_skill:fval('ai_skill'), top_skill:fval('top_skill') };
+    if (step === 4) return { target:cbVals('target'), target_industry:fval('target_industry'), sales_time:fval('sales_time'), channels:cbVals('channels'), anxiety:fval('anxiety') };
+    return {};
+  }
+
+  /* ── バリデーション ───────────────────── */
+  function validateStep(step) {
+    let ok = true;
+    (REQUIRED[step] || []).forEach(field => {
+      const errEl = document.getElementById('err-' + field);
+
+      if (['it_skills','target','channels'].includes(field)) {
+        const vals = cbVals(field);
+        const cg   = document.getElementById('cg-' + field);
+        if (!vals.length) { ok = false; errEl?.classList.add('visible'); cg?.classList.add('cg-error'); }
+        else              {             errEl?.classList.remove('visible'); cg?.classList.remove('cg-error'); }
+
+      } else if (['management_exp','teaching_exp','customer_exp'].includes(field)) {
+        const v  = radioVal(field);
+        const rg = document.getElementById('rg-' + field);
+        if (!v) { ok = false; errEl?.classList.add('visible'); rg?.classList.add('rg-error'); }
+        else    {             errEl?.classList.remove('visible'); rg?.classList.remove('rg-error'); }
+
+      } else {
+        const el = document.getElementById(field);
+        if (!el) return;
+        if (!el.value.trim()) { ok = false; el.classList.add('error'); errEl?.classList.add('visible'); }
+        else                  {             el.classList.remove('error'); errEl?.classList.remove('visible'); }
+      }
+    });
+    if (!ok) showToast('未入力の項目があります。確認してください。');
+    return ok;
+  }
+
+  /* ── localStorage ─────────────────────── */
+  function saveProgress() { localStorage.setItem('ai_consul_data', JSON.stringify(data)); }
+  function loadProgress()  { try { data = JSON.parse(localStorage.getItem('ai_consul_data') || '{}'); } catch(e) { data = {}; } }
+
+  function restoreFormValues() {
+    Object.entries(data).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => {
+          const el = document.querySelector(`input[name="${key}"][value="${v}"]`);
+          if (el) { el.checked = true; el.closest('.checkbox-option')?.classList.add('checked'); }
+        });
+      } else {
+        const el = document.getElementById(key);
+        if (el) el.value = value;
+        const radio = document.querySelector(`input[name="${key}"][value="${value}"]`);
+        if (radio) { radio.checked = true; radio.closest('.radio-option')?.classList.add('selected'); onRadioChange(key, value); }
+      }
+    });
+    onTargetChange();
+  }
+
+  /* ── UIイベント ───────────────────────── */
+  function onRadioChange(name, value) {
+    const rg = document.getElementById('rg-' + name);
+    if (rg) {
+      rg.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      rg.querySelector(`input[value="${value}"]`)?.closest('.radio-option')?.classList.add('selected');
+      rg.classList.remove('rg-error');
+    }
+    const cond = document.getElementById('cond-' + name);
+    if (cond) cond.classList.toggle('visible', value === 'あり');
+    document.getElementById('err-' + name)?.classList.remove('visible');
+  }
+
+  function onCheckChange(input) {
+    input.closest('.checkbox-option')?.classList.toggle('checked', input.checked);
+    input.closest('.checkbox-group')?.classList.remove('cg-error');
+    document.getElementById('err-' + input.name)?.classList.remove('visible');
+  }
+
+  function onTargetChange() {
+    const has = cbVals('target').includes('業種を指定したい');
+    document.getElementById('cond-target_industry')?.classList.toggle('visible', has);
+  }
+
+  /* ── 確認画面 ─────────────────────────── */
+  const LABELS = { name:'お名前', age_range:'年齢', current_job:'現在のお仕事', motivation:'きっかけ', income_goal:'収入目標', work_history:'職歴・業種', management_exp:'経営・管理経験', management_detail:'　└ 詳細', teaching_exp:'教える経験', teaching_detail:'　└ 詳細', customer_exp:'接客経験', customer_detail:'　└ 詳細', episode:'解決エピソード', pride:'誇れる経験', pc_skill:'PCスキル', it_skills:'使えるITツール', ai_skill:'AIツール経験', top_skill:'一番得意なスキル', target:'ターゲット', target_industry:'　└ 業種指定', sales_time:'営業稼働時間', channels:'営業チャネル', anxiety:'不安なこと' };
+  const SECTIONS = [
+    { title:'STEP 1：基本情報',   step:1, fields:['name','age_range','current_job','motivation','income_goal'] },
+    { title:'STEP 2：職歴・経験', step:2, fields:['work_history','management_exp','management_detail','teaching_exp','teaching_detail','customer_exp','customer_detail','episode','pride'] },
+    { title:'STEP 3：スキル',     step:3, fields:['pc_skill','it_skills','ai_skill','top_skill'] },
+    { title:'STEP 4：営業方針',   step:4, fields:['target','target_industry','sales_time','channels','anxiety'] },
+  ];
+
+  function renderConfirmation() {
+    document.getElementById('confirm-content').innerHTML = SECTIONS.map(sec => {
+      const rows = sec.fields.map(f => {
+        if (f === 'management_detail' && data.management_exp !== 'あり') return '';
+        if (f === 'teaching_detail'   && data.teaching_exp   !== 'あり') return '';
+        if (f === 'customer_detail'   && data.customer_exp   !== 'あり') return '';
+        if (f === 'target_industry'   && !(data.target||[]).includes('業種を指定したい')) return '';
+        const v = data[f];
+        const display = Array.isArray(v) ? v.join('、') : (v || '');
+        const empty   = !display;
+        return `<div class="confirm-row"><span class="confirm-key">${LABELS[f]}</span><span class="confirm-val${empty?' empty':''}">${empty?'未入力':esc(display)}</span></div>`;
+      }).join('');
+      return `<div class="confirm-section"><div class="confirm-header"><h3>${sec.title}</h3><button class="confirm-edit-btn" onclick="goToStep(${sec.step})">修正する</button></div>${rows}</div>`;
+    }).join('');
+  }
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* ── リセット ─────────────────────────── */
+  function clearForms() {
+    document.querySelectorAll('.q-input,.q-select,.q-textarea').forEach(e => e.value = '');
+    document.querySelectorAll('input[type=radio],input[type=checkbox]').forEach(e => {
+      e.checked = false;
+      e.closest('.radio-option,.checkbox-option')?.classList.remove('selected','checked');
+    });
+    document.querySelectorAll('.conditional').forEach(e => e.classList.remove('visible'));
+    document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
+    document.querySelectorAll('.q-input.error,.q-select.error,.q-textarea.error').forEach(e => e.classList.remove('error'));
+    document.querySelectorAll('.rg-error,.cg-error').forEach(e => e.classList.remove('rg-error','cg-error'));
+  }
+
+  function confirmReset() {
+    if (!confirm('最初からやり直しますか？\n入力内容はすべて消えます。')) return;
+    localStorage.removeItem('ai_consul_data');
+    data = {};
+    clearForms();
+    document.getElementById('step-' + currentStep).classList.remove('active');
+    currentStep = 0;
+    document.getElementById('step-0').classList.add('active');
+    document.getElementById('stepper').style.display      = 'none';
+    document.getElementById('footer-reset').style.display = 'none';
+    updateStepper(0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── トースト ─────────────────────────── */
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast'; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  }
+
+  /* ── タブ切り替え ─────────────────────── */
+  function switchTab(name) {
+    document.querySelectorAll('.result-tabs .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  /* ── コピー ───────────────────────────── */
+  function copyText(id) {
+    const text = document.getElementById(id)?.textContent || '';
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showToast('コピーしました！'); }
+    catch(e) { showToast('コピー失敗。手動でコピーしてください。'); }
+    document.body.removeChild(ta);
+  }
+
+  /* ── 価格テーブル ─────────────────────── */
+  function calcPrices(income_goal) {
+    const T = {
+      diag:     {'5万円以下':{min:10000,max:15000},'5〜10万円':{min:15000,max:30000},'10〜30万円':{min:30000,max:50000},'30万円以上':{min:50000,max:80000}},
+      training: {'5万円以下':{min:15000,max:25000},'5〜10万円':{min:30000,max:50000},'10〜30万円':{min:50000,max:80000},'30万円以上':{min:80000,max:150000}},
+      monthly:  {'5万円以下':{min:20000,max:30000},'5〜10万円':{min:30000,max:50000},'10〜30万円':{min:50000,max:80000},'30万円以上':{min:80000,max:200000}},
+    };
+    const k = income_goal || '5〜10万円';
+    const fmt = n => n.toLocaleString();
+    const d = T.diag[k]     || T.diag['5〜10万円'];
+    const tr = T.training[k] || T.training['5〜10万円'];
+    const m = T.monthly[k]  || T.monthly['5〜10万円'];
+    return {
+      diag:     `${fmt(d.min)}〜${fmt(d.max)}円`,
+      training: `${fmt(tr.min)}〜${fmt(tr.max)}円`,
+      monthly:  `${fmt(m.min)}〜${fmt(m.max)}円/月`,
+    };
+  }
+
+  /* ── 全生成 ───────────────────────────── */
+  function generateAll() {
+    const p = data;
+    const whs = [
+      p.management_exp === 'あり' ? 'management' : null,
+      p.teaching_exp   === 'あり' ? 'teaching'   : null,
+      p.customer_exp   === 'あり' ? 'customer'   : null,
+    ].filter(Boolean);
+    document.getElementById('text-profile').textContent  = genProfile(p, whs);
+    document.getElementById('text-menu').textContent     = genMenu(p);
+    document.getElementById('text-channel').textContent  = genChannel(p, whs);
+    document.getElementById('text-approach').textContent = genApproach(p, whs);
+    document.getElementById('text-meeting').textContent  = genMeeting(p);
+    document.getElementById('text-estimate').textContent = genEstimate(p);
+  }
+
+  /* ── ① プロフィール ──────────────────── */
+  function genProfile(p, whs) {
+    const name      = p.name        || '（お名前）';
+    const age       = p.age_range   || '';
+    const job       = p.current_job || '';
+    const wh        = p.work_history || '';
+    const pride     = p.pride       || '';
+    const topSkill  = p.top_skill   || '';
+    const itSkills  = (p.it_skills  || []).join('・') || 'ChatGPT・Excel等';
+    const aiLevel   = {'全く使ったことがない':'AIを学びながら','少し使ったことがある':'ChatGPT等を使いながら','業務で使っている':'業務でAIを活用しながら','人に教えられる':'AIを人に教えられるレベルで'}[p.ai_skill] || 'AIを活用しながら';
+
+    const sections = [];
+
+    if (whs.includes('management')) {
+      sections.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンA】マネジメント経験型
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${name}（${age}・${job}）
+
+${wh}のキャリアの中で、${p.management_detail || 'チームのマネジメント'}を経験してきました。
+
+「人を動かし、仕組みで成果を出す」現場を知っているからこそ、
+AIを「使えない状態」から「現場で回る状態」にするまでを
+丁寧にサポートできます。
+
+▶ 得意なこと：${topSkill}
+▶ 使えるツール：${itSkills}
+▶ AIスキル：${aiLevel}
+
+${pride}
+
+── 対応メニュー ──
+・AI活用 個別診断（現状把握→課題整理→提案）
+・スタッフ向け AI研修・ハンズオン
+・業務フロー改善 月額サポート
+
+まずはお気軽にご相談ください。`);
+    }
+
+    if (whs.includes('teaching')) {
+      sections.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンB】指導・研修経験型
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${name}（${age}・${job}）
+
+${wh}の経験の中で、${p.teaching_detail || '後輩・スタッフへの指導'}を長く担ってきました。
+
+「どう伝えれば伝わるか」を現場で磨いてきたため、
+AI初心者の方でも「なるほど、使えそう」と感じていただけるよう
+分かりやすく丁寧にご支援します。
+
+▶ 得意なこと：${topSkill}
+▶ 使えるツール：${itSkills}
+▶ AIスキル：${aiLevel}
+
+${pride}
+
+── 対応メニュー ──
+・AI基礎研修（1〜3時間 / オンライン可）
+・個別伴走サポート（月2〜4回）
+・マニュアル作成・定着支援
+
+"AIって難しそう"と思っている方こそ、ぜひご相談ください。`);
+    }
+
+    if (whs.includes('customer')) {
+      sections.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンC】対人・営業経験型
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${name}（${age}・${job}）
+
+${wh}で培った${p.customer_detail || 'お客様対応の経験'}を活かし、
+AIコンサルタントとして活動しています。
+
+現場目線でヒアリングし、「本当に使えるAI活用法」だけを
+お伝えするスタイルが好評です。
+
+▶ 得意なこと：${topSkill}
+▶ 使えるツール：${itSkills}
+▶ AIスキル：${aiLevel}
+
+${pride}
+
+── 対応メニュー ──
+・AI活用 個別診断（現状ヒアリング→提案書作成）
+・業種特化 導入サポート
+・継続フォロー 月額プラン
+
+まずは30分の無料相談から始めましょう。`);
+    }
+
+    if (sections.length === 0) {
+      sections.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【汎用プロフィール】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${name}（${age}・${job}）
+
+${wh}のキャリアを経て、AIコンサルタントとして活動しています。
+
+▶ 得意なこと：${topSkill}
+▶ 使えるツール：${itSkills}
+▶ AIスキル：${aiLevel}
+
+${pride}
+
+── 対応メニュー ──
+・AI活用 個別診断・相談
+・AI研修・ハンズオン指導
+・業務効率化 月額サポート
+
+まずはお気軽にご相談ください。`);
+    }
+
+    return sections.join('\n\n\n') + `\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【使い方のヒント】
+・上のパターンから自分のアピールに合うものを1つ選んでください
+・SNS用は150〜200文字に要約、名刺の裏は100文字以内が目安
+・【】内は実際の情報に書き換えてください`;
+  }
+
+  /* ── ② サービスメニュー ──────────────── */
+  function genMenu(p) {
+    const prices  = calcPrices(p.income_goal);
+    const name    = p.name || '（お名前）';
+    const targets = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '個人事業主・中小企業';
+    const ind     = (p.target || []).includes('業種を指定したい') && p.target_industry ? `（${p.target_industry}専門）` : '';
+    return `━━━━━━━━━━━━━━━━━━━━━━━━━━━
+サービスメニュー & 料金表
+${name} AIコンサルタント
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+対象：${targets}${ind}
+
+┌──────────────────────────────────────
+│ プラン① AI活用 個別診断（スポット）
+│ 料金：${prices.diag}
+│ 内容：
+│  ・現在の業務フローをヒアリング（60〜90分）
+│  ・AIで改善できる箇所を整理・可視化
+│  ・優先順位づけした提案書を作成・納品
+│ 形式：オンライン（Zoom等）or 対面
+└──────────────────────────────────────
+
+┌──────────────────────────────────────
+│ プラン② AI研修・ハンズオン（単発）
+│ 料金：${prices.training}
+│ 内容：
+│  ・ChatGPT等の基礎から実践まで
+│  ・業種・業務に特化した活用事例を紹介
+│  ・その場で試せるハンズオン形式
+│  ・フォローアップ資料を提供
+│ 形式：オンライン or 現地訪問（要相談）
+└──────────────────────────────────────
+
+┌──────────────────────────────────────
+│ プラン③ 月額サポートプラン
+│ 料金：${prices.monthly}
+│ 内容：
+│  ・月2〜4回のオンライン相談（各30〜60分）
+│  ・AIツール活用の定着サポート
+│  ・チャット質問対応（営業日）
+│ 期間：3ヶ月〜（1ヶ月単位で更新可）
+└──────────────────────────────────────
+
+【オプション】
+・提案書・報告書の作成代行：別途お見積もり
+・スタッフ向けマニュアル作成：別途お見積もり
+・複数名研修（3名以上）：割引あり、お問い合わせください
+
+【お支払い方法】
+銀行振込 / PayPay / その他（ご相談ください）
+
+※ 料金は目安です。規模・内容により変動する場合があります。
+※ まずは無料の30分ご相談からお気軽にどうぞ。`;
+  }
+
+  /* ── ③ 営業チャネル計画 ─────────────── */
+  function genChannel(p, whs) {
+    const channels   = p.channels || [];
+    const sales_time = p.sales_time || '週3〜5時間';
+    const targets    = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '個人事業主・中小企業';
+    const slots      = {'週1〜2時間':2,'週3〜5時間':5,'週10時間以上':10,'ほぼフルタイムで動ける':20}[sales_time] || 5;
+
+    const PRIO = ['知人・紹介','ランサーズ・ここナラ','SNS発信','飛び込み・電話','その他'];
+    const sorted = channels.slice().sort((a,b) => {
+      const ai = PRIO.indexOf(a), bi = PRIO.indexOf(b);
+      return (ai<0?99:ai) - (bi<0?99:bi);
+    });
+
+    const DESC = {
+      '知人・紹介':          ['最も成約率が高い。既存の人脈から声をかける',      '連絡先リストを30人作成し、1日3人にDMや電話'],
+      'ランサーズ・ここナラ': ['実績ゼロでも出品可能。プロフィールで信頼を補う', '出品ページ公開後、最初の3件は相場の7割で受注し★をもらう'],
+      'SNS発信':             ['フォロワーが少なくても継続が命',                 '週3投稿（AI活用事例・業種特化Tips）を継続'],
+      '飛び込み・電話':      ['即アポが取れる。訪問リストを事前に作成',          '商工会議所の会員リスト・地域の事業者マップを活用'],
+      'その他':              ['口コミ・紹介依頼・セミナー登壇等',               '既存クライアントや知人に定期的に紹介依頼を行う'],
+    };
+
+    let chStr = sorted.map((ch, i) => {
+      const [desc, action] = DESC[ch] || ['',''];
+      return `【優先度${i+1}位】${ch}\n  └ ${desc}\n  └ 行動：${action}`;
+    }).join('\n\n');
+
+    const addKougi = whs.includes('management') || whs.includes('customer');
+    if (addKougi && !channels.includes('飛び込み・電話')) {
+      chStr += `\n\n【推奨追加】商工会議所・異業種交流会\n  └ 経営・接客経験のある方に特に有効。リアルな信頼構築に強い\n  └ 行動：地域の商工会議所に入会、月1〜2回イベントに参加`;
+    }
+
+    const week1items = [
+      channels.includes('知人・紹介')          ? '・連絡先リスト作成（まず30人リストアップ）' : '',
+      channels.includes('ランサーズ・ここナラ') ? '・ランサーズ/ここナラ プロフィール・出品ページ作成' : '',
+      channels.includes('SNS発信')             ? '・SNSプロフィール整備・最初の投稿3本作成' : '',
+      channels.includes('飛び込み・電話')      ? '・訪問リスト作成（地域の事業者20件）' : '',
+      '・プロフィール文・営業メッセージのドラフト作成',
+    ].filter(Boolean).join('\n');
+
+    const week2items = [
+      channels.includes('知人・紹介')          ? '・リストの上位10人にDM・連絡（近況報告ベース）' : '',
+      channels.includes('ランサーズ・ここナラ') ? '・出品ページ公開・最初の提案メッセージ送信' : '',
+      channels.includes('SNS発信')             ? '・週3投稿スタート（AI活用Tips・自己紹介）' : '',
+      channels.includes('飛び込み・電話')      ? '・電話アポ or 訪問 5件チャレンジ' : '',
+      '・反応・返信を記録→メッセージ改善',
+    ].filter(Boolean).join('\n');
+
+    return `━━━━━━━━━━━━━━━━━━━━━━━━━━━
+営業チャネル計画
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+対象：${targets}
+稼働時間：${sales_time}（週 約${slots}時間）
+
+▼ チャネル優先順位
+${chStr}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+▼ 1ヶ月 行動計画
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【第1週】準備・仕込み
+${week1items}
+
+【第2週】最初のアプローチ開始
+${week2items}
+
+【第3週】面談・商談
+・面談アポを目標2件獲得
+・面談では「ヒアリング8割・提案2割」を意識
+・面談後24時間以内にお礼・フォローメール送信
+・反応のよかったアプローチ文を「勝ちパターン」に記録
+
+【第4週】成約・振り返り
+・面談済みの方にフォロー連絡（1〜2日後）
+・1件目の成約を目指す（最初は小さいプランでもOK）
+・1ヶ月の振り返り：アプローチ数・面談数・反応率を集計
+・翌月の計画修正（うまくいったことを増やす）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+▼ KPI目標（最初の1ヶ月）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+アプローチ数：目標 ${Math.max(5, slots * 2)}件/月
+面談獲得　　：目標 ${Math.max(2, Math.floor(slots / 2))}件/月
+成約　　　　：目標 1件/月（まずここを達成！）
+
+※ 数字はあくまで目安。週次で振り返りながら調整してください。`;
+  }
+
+  /* ── ④ アプローチ文 ──────────────────── */
+  function genApproach(p, whs) {
+    const name     = p.name || '（お名前）';
+    const channels = p.channels || [];
+    const targets  = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '事業者';
+    const tgtStr   = ((p.target || []).includes('業種を指定したい') && p.target_industry) ? p.target_industry : targets;
+    const parts    = [];
+
+    if (channels.includes('知人・紹介')) {
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンA】知人・紹介向け（LINE・DM）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+〇〇さん、お久しぶりです。${name}です。
+
+最近、AIを使った業務効率化のコンサルタントとして活動を始めました。
+
+ChatGPTなどのAIツールを使うと、
+・見積書・メール作成の時間を半分以下に
+・SNS投稿やチラシ原稿を自動生成
+・スタッフへの引き継ぎ資料を簡単に作成
+といったことができるようになります。
+
+「うちの仕事でも使えるのかな？」と思ったら、
+まず30分、話を聞いてみませんか？
+最初の相談は無料です。
+
+お時間のよいときに返信もらえると嬉しいです。`);
+    }
+
+    if (channels.includes('ランサーズ・ここナラ')) {
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンB】クラウドソーシング 提案文
+（ランサーズ・ここナラ）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+はじめまして、${name}と申します。
+
+${p.work_history ? p.work_history + 'の経験を持ち、' : ''}現在はAI活用コンサルタントとして活動しています。
+
+${tgtStr}さまの業務に特化して、
+AIツールを「実際に使える形」に落とし込むお手伝いをします。
+
+▶ できること
+・現状ヒアリングと課題整理（提案書つき）
+・ChatGPT等の操作研修・ハンズオン指導
+・業種に合ったプロンプト・テンプレートの作成
+
+▶ 対応実績（現在モニター募集中）
+ご満足いただけた場合はレビューをお願いしています。
+モニター価格でご提供中です。
+
+まずはメッセージにてご状況をお聞かせください。
+丁寧にご対応します。
+
+${name}`);
+    }
+
+    if (channels.includes('SNS発信')) {
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンC】SNS発信用（投稿テンプレ）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▼ 自己紹介投稿
+
+${p.current_job || '会社員'}の${name}です。
+
+${p.pride || '現場を知っているからこそできる提案'}を強みに、
+AIコンサルタントとして活動を始めました。
+
+こんな方のお手伝いをしています👇
+✅「AIって気になるけど何から始めればいい？」
+✅「スタッフにAIを使わせたいけど研修が面倒」
+✅「見積書・メール・資料作成の時間を減らしたい」
+
+まずは30分の無料相談から。
+プロフィールのリンクからどうぞ！
+
+#AI活用 #業務効率化 #AIコンサル
+
+─────────────────────────────
+▼ 価値提供投稿（週3投稿の例）
+
+【${tgtStr}さんへ】
+ChatGPTで〇〇する3つの方法
+
+1. ○○○
+2. ○○○
+3. ○○○
+
+「こんなことに困ってる」があればコメントかDMで。
+
+#AI活用 #業務改善 #${tgtStr}`);
+    }
+
+    if (channels.includes('飛び込み・電話')) {
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【パターンD】飛び込み・電話営業トーク
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▼ 電話での最初の一言（15秒ルール）
+
+「突然のお電話、失礼します。${name}と申します。
+${tgtStr}さまの業務にAIを取り入れて、
+作業時間を削減するご支援をしています。
+30分だけ、お話を聞いていただけませんか？」
+
+▼ 飛び込み訪問でのトーク
+
+「こんにちは、${name}と申します。
+最近、ChatGPTなどのAIを使って
+メール・見積書・SNS投稿を自動で作る方法が
+${tgtStr}さんの間で広まっています。
+5分だけお話しさせていただけますか？
+今すぐ何かをお願いするわけではありません。」
+
+▼ 断られたときの返し
+
+「ありがとうございます。
+名刺だけ受け取っていただけますか？
+半年後に『あの話、聞いてみたい』と思ったときに
+ご連絡いただければ嬉しいです。」`);
+    }
+
+    if (p.anxiety) {
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【不安への切り返し】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+あなたの不安：「${p.anxiety}」
+
+▼ 対処法・マインドセット
+
+実績がないことへの不安には…
+→ 最初は「モニター価格・返金保証つき」でスタートしましょう。
+  実績ゼロでも丁寧なヒアリングと誠実な対応が信頼を作ります。
+  「まず1件、小さくやりきる」が最初のステップです。
+
+何を教えられるか分からない不安には…
+→ あなたの経験（${p.pride || '現場での経験'}）を活かした
+  「業種・業務に特化したAI活用法」こそが差別化ポイントです。
+  「AI全般が分かる人」より「私の業界を知っているAIの人」の方が
+  お客様には響きます。`);
+    }
+
+    return parts.length ? parts.join('\n\n\n') : '（チャネルが選択されていません）';
+  }
+
+  /* ── ⑤ 面談トークスクリプト ─────────── */
+  function genMeeting(p) {
+    const name    = p.name || '（お名前）';
+    const targets = (p.target || []).filter(t => t !== '業種を指定したい');
+    const prices  = calcPrices(p.income_goal);
+    const QS = {
+      '個人事業主・小規模店舗': ['今一番時間がかかっている作業は何ですか？','スタッフへの引き継ぎで困ったことはありますか？','SNSやチラシの作成、今はどうされていますか？'],
+      '中小企業（5〜50名）':    ['社内でAIを試した方はいますか？どんな印象でしたか？','どの部署・業務で効率化したいですか？','研修後の定着に不安はありますか？'],
+      '大企業の部署単位':       ['部署としてのAI活用方針は決まっていますか？','セキュリティ・情報管理のルールはありますか？','研修の承認はどなたが行いますか？'],
+    };
+    const qs = QS[targets[0]] || ['AI活用に興味を持ったきっかけは何ですか？','今一番時間がかかっている業務は何ですか？','AI導入で一番期待していることは？'];
+
+    return `━━━━━━━━━━━━━━━━━━━━━━━━━━━
+面談トークスクリプト
+（初回オンライン相談・30〜60分版）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ 開始〜アイスブレイク（5分）
+
+「本日はお時間いただきありがとうございます。${name}です。
+今日は売り込みではなく、まずお困りごとをお聞きして、
+AIがお役に立てるかを一緒に考えさせてください。」
+
+（プロフィール文を2〜3分で話す）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ ヒアリング（15〜20分）
+
+【必ず聞く質問】
+□ ${qs[0]}
+□ ${qs[1]}
+□ ${qs[2]}
+□ 「現在、AIを使っているスタッフはいますか？」
+□ 「最初に手をつけたい業務はどこですか？」
+
+【メモのポイント】
+・数字で聞く（何人・何時間・いくら・何件）
+・「つまりこういうことですか？」と要約して確認する
+・「なぜそれが問題だと感じましたか？」と深掘りする
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ 課題整理・提案（10〜15分）
+
+「聞かせていただいた内容をまとめると、
+〇〇という課題があると理解しました。（確認する）
+
+これに対して、AIを活用すれば〇〇ができます。
+具体的には…（事例を1〜2個話す）
+
+まず診断・相談から始めると、
+どこを優先すべきかが見えてきます。」
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ プラン提示・クロージング（5〜10分）
+
+「今日の内容を踏まえると、
+まず【プラン①診断】（${prices.diag}）からスタートするのが
+一番リスクが低くて確認しやすいかと思います。
+
+どのくらいのご予算感でお考えですか？」
+
+（相手の反応を待つ）
+
+「もしよろしければ、来週中にご返事いただけますか？
+今月はあと○枠お受けできます。」
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ よくある断り文句への返し
+
+「費用感が合わない」
+→「まず1回だけでも試してみませんか？
+  効果が出なければ、それ以上進めなくて大丈夫です。」
+
+「今は忙しい」
+→「お忙しい方ほど、AIで時間を作るのが先決です。
+  まず30分、お話しさせてください。」
+
+「社内で決められない」
+→「では決定権者の方にも同席いただけますか？
+  資料もご用意します。」
+${p.anxiety ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ あなたへの声がけ（不安を感じたとき）
+
+「${p.anxiety}」という不安があっても…
+→ 相手は「AIの専門家」より「私の業界を理解してくれる人」を求めています。
+  完璧に知らなくてもいい。「一緒に考えましょう」が最強のトークです。` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ 面談後のフォロー（24時間以内に送る）
+
+件名：本日はありがとうございました【${name}】
+
+〇〇様
+
+先ほどはお時間をいただきありがとうございました。
+
+本日お話しした内容をまとめました：
+・課題：【〇〇】
+・ご提案：【プラン①/②/③】
+・お見積もり：${prices.diag}〜
+
+ご検討いただき、不明な点があればいつでもご連絡ください。
+引き続きよろしくお願いいたします。
+
+${name}`;
+  }
+
+  /* ── ⑥ 見積書 ───────────────────────── */
+  function genEstimate(p) {
+    const name   = p.name || '（お名前）';
+    const prices = calcPrices(p.income_goal);
+    const today  = new Date().toLocaleDateString('ja-JP', {year:'numeric',month:'long',day:'numeric'});
+    const expiry = new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString('ja-JP', {year:'numeric',month:'long',day:'numeric'});
+    return `━━━━━━━━━━━━━━━━━━━━━━━━━━━
+見　積　書（雛形）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+発行日　：${today}
+有効期限：${expiry}
+
+【宛先】
+  【クライアント名・会社名】　御中
+
+【発行者】
+  ${name}
+  AIコンサルタント
+  連絡先：【メールアドレス / 電話番号】
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【お見積もり内容】
+
+  項目                  単価              数量・期間
+  ───────────────────────────────────────
+  AI活用 個別診断       ${prices.diag}     1回
+  AI研修・ハンズオン    ${prices.training}  1回
+  月額サポートプラン    ${prices.monthly}   【月数】ヶ月
+
+※ 上記から必要なプランを選択し、不要な行は削除してください
+
+  小　　計：【金額】円
+  消費税10%：【金額】円
+  ─────────────────────────────
+  合　　計：【金額】円（税込）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【お支払い条件】
+  期限：サービス開始日の【7/14/30】日前
+  方法：銀行振込 / PayPay / その他（ご相談）
+
+【振込先（銀行振込の場合）】
+  銀行名　：【〇〇銀行】
+  支店名　：【〇〇支店】
+  口座種別：普通
+  口座番号：【〇〇〇〇〇〇〇】
+  口座名義：【〇〇 〇〇（カナ）】
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【特記事項】
+・オンライン（Zoom等）での実施を基本とします
+・対面対応をご希望の場合は別途ご相談ください
+・成果物（提案書等）はPDF形式で納品します
+・キャンセルポリシー：開始7日前まで全額返金、以降50%
+・本見積もりは税抜き表示。消費税10%を別途申し受けます
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【使い方のヒント】
+・【】内をすべて実際の情報に書き換えてください
+・Word や Google ドキュメントに貼り付けて整形すると◎
+・印鑑欄が必要な場合は別途ご用意ください`;
+  }
+
+  /* ── 初期化 ───────────────────────────── */
+  loadProgress();
+  restoreFormValues();
+</script>
+</body>
+</html>
