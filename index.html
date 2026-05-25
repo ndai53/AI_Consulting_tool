@@ -138,6 +138,9 @@
     .footer { text-align: center; margin-top: 40px; padding-bottom: 48px; }
     .btn-reset { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline; font-family: 'Noto Sans JP', sans-serif; padding: 4px 8px; }
     .btn-reset:hover { color: var(--danger); }
+    .file-ops { display: flex; justify-content: center; gap: 10px; margin-bottom: 14px; }
+    .btn-fileop { background: none; border: 1.5px solid var(--border); border-radius: 6px; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 7px 18px; font-family: 'Noto Sans JP', sans-serif; font-weight: 500; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+    .btn-fileop:hover { background: var(--primary-lt); border-color: var(--primary); color: var(--primary); }
 
     @media (max-width: 480px) {
       body { padding: 12px; }
@@ -491,6 +494,10 @@
   </div>
 
   <div class="footer" id="footer-reset" style="display:none">
+    <div class="file-ops">
+      <button class="btn-fileop" onclick="saveToFile()">保存する (.json)</button>
+      <label class="btn-fileop">読み込む (.json)<input type="file" id="load-input" accept=".json" onchange="loadFromFile(this)" style="display:none"></label>
+    </div>
     <button class="btn-reset" onclick="confirmReset()">最初からやり直す</button>
   </div>
 
@@ -659,6 +666,42 @@
   }
 
   function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* ── JSON保存・読み込み ───────────────── */
+  function saveToFile() {
+    if (currentStep >= 1 && currentStep <= 4) Object.assign(data, collectStepData(currentStep));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ai_consul_data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('JSONファイルを保存しました');
+  }
+
+  function loadFromFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const loaded = JSON.parse(e.target.result);
+        if (typeof loaded !== 'object' || loaded === null || Array.isArray(loaded)) throw new Error();
+        data = loaded;
+        saveProgress();
+        clearForms();
+        restoreFormValues();
+        showToast('データを読み込みました');
+      } catch(err) {
+        showToast('読み込み失敗：正しいJSONファイルを選んでください');
+      }
+      input.value = '';
+    };
+    reader.readAsText(file, 'utf-8');
+  }
 
   /* ── リセット ─────────────────────────── */
   function clearForms() {
@@ -888,6 +931,14 @@ ${pride}
     const name    = p.name || '（お名前）';
     const targets = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '個人事業主・中小企業';
     const ind     = (p.target || []).includes('業種を指定したい') && p.target_industry ? `（${p.target_industry}専門）` : '';
+
+    const beginnerAI  = p.ai_skill === '全く使ったことがない' || p.ai_skill === '少し使ったことがある';
+    const noExperience = p.teaching_exp === 'なし' || p.management_exp === 'なし';
+    const needsNote   = beginnerAI || noExperience;
+    const starterNote = needsNote
+      ? `\n※ 最初の2〜3件は実績作りのため、\n  スタートパック（診断15,000〜30,000円）からの\n  受注を推奨します。実績ができたら単価を上げていきましょう。`
+      : '';
+
     return `━━━━━━━━━━━━━━━━━━━━━━━━━━━
 サービスメニュー & 料金表
 ${name} AIコンサルタント
@@ -935,7 +986,7 @@ ${name} AIコンサルタント
 銀行振込 / PayPay / その他（ご相談ください）
 
 ※ 料金は目安です。規模・内容により変動する場合があります。
-※ まずは無料の30分ご相談からお気軽にどうぞ。`;
+※ まずは無料の30分ご相談からお気軽にどうぞ。${starterNote}`;
   }
 
   /* ── ③ 営業チャネル計画 ─────────────── */
