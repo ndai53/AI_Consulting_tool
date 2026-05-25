@@ -829,6 +829,12 @@
     };
   }
 
+  /* ── チャネル名正規化（かな表記ゆれ吸収）── */
+  function normalizeChannels(arr) {
+    // ここナラ(ひらがな U+3053) ↔ ここナラ(カタカナ U+30B3) 両対応
+    return (arr || []).map(c => c.replace(/ココ(?=ナラ)/g, 'ここ'));
+  }
+
   /* ── 全生成 ───────────────────────────── */
   function generateAll() {
     const p = data;
@@ -850,7 +856,7 @@
     const name      = p.name        || '（お名前）';
     const age       = p.age_range   || '';
     const job       = p.current_job || '';
-    const wh        = p.work_history || '';
+    const wh        = (p.work_history || '').replace(/。$/, '');
     const pride     = p.pride       || '';
     const topSkill  = p.top_skill   || '';
     const itSkills  = (p.it_skills  || []).join('・') || 'ChatGPT・Excel等';
@@ -980,7 +986,7 @@ ${pride}
     const noExperience = p.teaching_exp === 'なし' || p.management_exp === 'なし';
     const needsNote   = beginnerAI || noExperience;
     const starterNote = needsNote
-      ? `\n※ 最初の2〜3件は実績作りのため、\n  スタートパック（診断15,000〜30,000円）からの\n  受注を推奨します。実績ができたら単価を上げていきましょう。`
+      ? `\n※ 最初の2〜3件は実績作りのため、\n  スタートパック（診断 ${prices.diag}）からの\n  受注を推奨します。実績ができたら単価を上げていきましょう。`
       : '';
 
     return `━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1035,7 +1041,7 @@ ${name} AIコンサルタント
 
   /* ── ③ 営業チャネル計画 ─────────────── */
   function genChannel(p, whs) {
-    const channels   = p.channels || [];
+    const channels   = normalizeChannels(p.channels);
     const sales_time = p.sales_time || '週3〜5時間';
     const targets    = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '個人事業主・中小企業';
     const slots      = {'週1〜2時間':2,'週3〜5時間':5,'週10時間以上':10,'ほぼフルタイムで動ける':20}[sales_time] || 5;
@@ -1126,7 +1132,7 @@ ${week2items}
   /* ── ④ アプローチ文 ──────────────────── */
   function genApproach(p, whs) {
     const name     = p.name || '（お名前）';
-    const channels = p.channels || [];
+    const channels = normalizeChannels(p.channels);
     const targets  = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '事業者';
     const tgtStr   = ((p.target || []).includes('業種を指定したい') && p.target_industry) ? p.target_industry : targets;
     const parts    = [];
@@ -1161,7 +1167,7 @@ ChatGPTなどのAIツールを使うと、
 
 はじめまして、${name}と申します。
 
-${p.work_history ? p.work_history + 'の経験を持ち、' : ''}現在はAI活用コンサルタントとして活動しています。
+${p.work_history ? p.work_history.replace(/。$/, '') + 'の経験を持ち、' : ''}現在はAI活用コンサルタントとして活動しています。
 
 ${tgtStr}さまの業務に特化して、
 AIツールを「実際に使える形」に落とし込むお手伝いをします。
