@@ -829,10 +829,19 @@
     };
   }
 
-  /* ── チャネル名正規化（かな表記ゆれ吸収）── */
-  function normalizeChannels(arr) {
-    // ここナラ(ひらがな U+3053) ↔ ココナラ(カタカナ U+30B3) 両対応
-    return (arr || []).map(c => c.replace(/ココ(?=ナラ)/g, 'ここ'));
+  /* ── ターゲット文字列整形 ────────────────── */
+  function stripTargetBrackets(s) {
+    return s.replace(/（[^）]*）/g, '').trim();
+  }
+  function toBodyTarget(s) {
+    // 「個人事業主・小規模店舗」→「個人事業主」（複数選択時は先頭1語、括弧除去）
+    return stripTargetBrackets(s.split('・')[0]);
+  }
+  function toTargetHashtags(s) {
+    return s.split('・')
+      .map(t => '#' + t.replace(/（[^）]*）/g, '').trim())
+      .filter(t => t.length > 1)
+      .join(' ');
   }
 
   /* ── 全生成 ───────────────────────────── */
@@ -856,6 +865,8 @@
     const name      = p.name        || '（お名前）';
     const age       = p.age_range   || '';
     const job       = p.current_job || '';
+    const agejob    = [age, job].filter(Boolean).join('・');
+    const nameLabel = agejob ? `${name}（${agejob}）` : name;
     const wh        = (p.work_history || '').replace(/。$/, '');
     const pride     = p.pride       || '';
     const topSkill  = p.top_skill   || '';
@@ -869,7 +880,7 @@
 【パターンA】マネジメント経験型
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${name}（${age}・${job}）
+${nameLabel}
 
 ${wh}のキャリアの中で、${p.management_detail || 'チームのマネジメント'}を経験してきました。
 
@@ -896,7 +907,7 @@ ${pride}
 【パターンB】指導・研修経験型
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${name}（${age}・${job}）
+${nameLabel}
 
 ${wh}の経験の中で、${p.teaching_detail || '後輩・スタッフへの指導'}を長く担ってきました。
 
@@ -923,7 +934,7 @@ ${pride}
 【パターンC】対人・営業経験型
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${name}（${age}・${job}）
+${nameLabel}
 
 ${wh}で培った${p.customer_detail || 'お客様対応の経験'}を活かし、
 AIコンサルタントとして活動しています。
@@ -950,7 +961,7 @@ ${pride}
 【汎用プロフィール】
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${name}（${age}・${job}）
+${nameLabel}
 
 ${wh}のキャリアを経て、AIコンサルタントとして活動しています。
 
@@ -994,7 +1005,7 @@ ${pride}
 ${name} AIコンサルタント
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-対象：${targets}${ind}
+対象：${stripTargetBrackets(targets)}${ind}${(p.target || []).includes('大企業の部署単位') && !ind ? '（✏️企業名・業種を記入）' : ''}
 
 ┌──────────────────────────────────────
 │ プラン① AI活用 個別診断（スポット）
@@ -1041,7 +1052,7 @@ ${name} AIコンサルタント
 
   /* ── ③ 営業チャネル計画 ─────────────── */
   function genChannel(p, whs) {
-    const channels   = normalizeChannels(p.channels);
+    const channels   = p.channels || [];
     const sales_time = p.sales_time || '週3〜5時間';
     const targets    = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '個人事業主・中小企業';
     const slots      = {'週1〜2時間':2,'週3〜5時間':5,'週10時間以上':10,'ほぼフルタイムで動ける':20}[sales_time] || 5;
@@ -1072,7 +1083,7 @@ ${name} AIコンサルタント
 
     const week1items = [
       channels.includes('知人・紹介')          ? '・連絡先リスト作成（まず30人リストアップ）' : '',
-      channels.includes('ランサーズ・ココナラ') ? '・ランサーズ/ココナラ プロフィール・出品ページ作成' : '',
+      channels.includes('ランサーズ・ココナラ') ? '・ランサーズ・ココナラ プロフィール・出品ページ作成' : '',
       channels.includes('SNS発信')             ? '・SNSプロフィール整備・最初の投稿3本作成' : '',
       channels.includes('飛び込み・電話')      ? '・訪問リスト作成（地域の事業者20件）' : '',
       '・プロフィール文・営業メッセージのドラフト作成',
@@ -1090,7 +1101,7 @@ ${name} AIコンサルタント
 営業チャネル計画
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-対象：${targets}
+対象：${stripTargetBrackets(targets)}${(p.target || []).includes('大企業の部署単位') ? '（✏️企業名・業種を記入）' : ''}
 稼働時間：${sales_time}（週 約${slots}時間）
 
 ▼ チャネル優先順位
@@ -1132,7 +1143,7 @@ ${week2items}
   /* ── ④ アプローチ文 ──────────────────── */
   function genApproach(p, whs) {
     const name     = p.name || '（お名前）';
-    const channels = normalizeChannels(p.channels);
+    const channels = p.channels || [];
     const targets  = (p.target || []).filter(t => t !== '業種を指定したい').join('・') || '事業者';
     const tgtStr   = ((p.target || []).includes('業種を指定したい') && p.target_industry) ? p.target_industry : targets;
     const parts    = [];
@@ -1169,7 +1180,7 @@ ChatGPTなどのAIツールを使うと、
 
 ${p.work_history ? p.work_history.replace(/。$/, '') + 'の経験を持ち、' : ''}現在はAI活用コンサルタントとして活動しています。
 
-${tgtStr}さまの業務に特化して、
+${toBodyTarget(tgtStr)}さまの業務に特化して、
 AIツールを「実際に使える形」に落とし込むお手伝いをします。
 
 ▶ できること
@@ -1212,7 +1223,7 @@ AIコンサルタントとして活動を始めました。
 ─────────────────────────────
 ▼ 価値提供投稿（週3投稿の例）
 
-【${tgtStr}さんへ】
+${(p.target || []).includes('大企業の部署単位') ? '【✏️ターゲット企業名・業種を記入してください】さんへ' : '【' + toBodyTarget(tgtStr) + 'さんへ】'}
 ChatGPTで〇〇する3つの方法
 
 1. ○○○
@@ -1221,7 +1232,9 @@ ChatGPTで〇〇する3つの方法
 
 「こんなことに困ってる」があればコメントかDMで。
 
-#AI活用 #業務改善 #${tgtStr}`);
+#AI活用 #業務改善 ${(p.target || []).includes('大企業の部署単位')
+  ? '※ 大企業向けのハッシュタグは業種・部署・企業名に合わせて個別に設定してください。\n  例：#製造業DX #営業DX #〇〇株式会社 など'
+  : toTargetHashtags(tgtStr)}`);
     }
 
     if (channels.includes('飛び込み・電話')) {
@@ -1232,7 +1245,7 @@ ChatGPTで〇〇する3つの方法
 ▼ 電話での最初の一言（15秒ルール）
 
 「突然のお電話、失礼します。${name}と申します。
-${tgtStr}さまの業務にAIを取り入れて、
+${(p.target || []).includes('大企業の部署単位') ? '【✏️ターゲット企業名・業種を記入】' : toBodyTarget(tgtStr)}さまの業務にAIを取り入れて、
 作業時間を削減するご支援をしています。
 30分だけ、お話を聞いていただけませんか？」
 
@@ -1241,7 +1254,7 @@ ${tgtStr}さまの業務にAIを取り入れて、
 「こんにちは、${name}と申します。
 最近、ChatGPTなどのAIを使って
 メール・見積書・SNS投稿を自動で作る方法が
-${tgtStr}さんの間で広まっています。
+${(p.target || []).includes('大企業の部署単位') ? '【✏️ターゲット企業名・業種を記入】' : toBodyTarget(tgtStr)}さんの間で広まっています。
 5分だけお話しさせていただけますか？
 今すぐ何かをお願いするわけではありません。」
 
