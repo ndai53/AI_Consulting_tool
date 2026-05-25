@@ -489,6 +489,7 @@
 
       <div class="nav-buttons">
         <button class="btn btn-back" onclick="goToStep(5)">← 修正する</button>
+        <button class="btn btn-primary" onclick="saveAsWord()">Word保存 (.docx)</button>
       </div>
     </div>
   </div>
@@ -503,6 +504,7 @@
 
 </div><!-- /container -->
 
+<script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
 <script>
   /* ── 状態 ─────────────────────────────── */
   let currentStep = 0;
@@ -530,9 +532,8 @@
     currentStep = next;
     document.getElementById('step-' + currentStep).classList.add('active');
 
-    const show = next !== 0;
-    document.getElementById('stepper').style.display     = show ? 'flex'  : 'none';
-    document.getElementById('footer-reset').style.display = show ? 'block' : 'none';
+    document.getElementById('stepper').style.display      = next !== 0 ? 'flex'  : 'none';
+    document.getElementById('footer-reset').style.display = (next >= 1 && next <= 5) ? 'block' : 'none';
 
     updateStepper(next);
     if (next === 5) renderConfirmation();
@@ -701,6 +702,49 @@
       input.value = '';
     };
     reader.readAsText(file, 'utf-8');
+  }
+
+  /* ── Word保存 ────────────────────────── */
+  function saveAsWord() {
+    if (typeof docx === 'undefined') {
+      showToast('ライブラリ未読み込み。ページを再読み込みしてください。');
+      return;
+    }
+    const WORD_SECTIONS = [
+      { title: '① プロフィール文',           id: 'text-profile'  },
+      { title: '② サービスメニュー＆単価表', id: 'text-menu'     },
+      { title: '③ 営業チャネル計画',         id: 'text-channel'  },
+      { title: '④ アプローチ文',             id: 'text-approach' },
+      { title: '⑤ 面談トークスクリプト',     id: 'text-meeting'  },
+      { title: '⑥ 見積書雛形',              id: 'text-estimate' },
+    ];
+    const children = [];
+    WORD_SECTIONS.forEach((sec, idx) => {
+      children.push(new docx.Paragraph({
+        pageBreakBefore: idx > 0,
+        children: [new docx.TextRun({ text: sec.title, bold: true, size: 32, font: '游ゴシック' })],
+        spacing: { after: 280 },
+      }));
+      const text = document.getElementById(sec.id)?.textContent || '';
+      text.split('\n').forEach(line => {
+        children.push(new docx.Paragraph({
+          children: [new docx.TextRun({ text: line, size: 20, font: '游ゴシック' })],
+          spacing: { after: 0 },
+        }));
+      });
+    });
+    const doc = new docx.Document({ sections: [{ children }] });
+    docx.Packer.toBlob(doc).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'AIコンサル_営業準備一式.docx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Wordファイルを保存しました');
+    }).catch(() => showToast('保存に失敗しました'));
   }
 
   /* ── リセット ─────────────────────────── */
