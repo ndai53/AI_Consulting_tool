@@ -2,7 +2,7 @@
 
 > 19問に答えるだけで、AIコンサルの営業準備が**全部そろう**ウェブツール
 
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen?logo=github)](https://ndai53.github.io/AI_Consulting_tool/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen?logo=github)](https://ndai53.github.io/AI_Consul_StarterKit/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![No Login Required](https://img.shields.io/badge/登録-不要-blue)
 ![No Server Required](https://img.shields.io/badge/サーバー-不要-blue)
@@ -11,7 +11,7 @@
 
 ## 🚀 デモ
 
-**👉 [https://ndai53.github.io/AI_Consulting_tool/](https://ndai53.github.io/AI_Consulting_tool/)**
+**👉 [https://ndai53.github.io/AI_Consulting_tool/](https://ndai53.github.io/AI_Consul_StarterKit/)**
 
 所要時間：約5〜8分 ／ 登録不要 ／ サーバー不要  
 入力データはブラウザにのみ保存されます（外部送信なし）
@@ -178,6 +178,6 @@ MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
 
 **「準備完了。あとは動くだけ。」**
 
-[![Use Tool](https://img.shields.io/badge/スターターキットを使う-→-brightgreen?style=for-the-badge)](https://ndai53.github.io/AI_Consulting_tool/)
+[![Use Tool](https://img.shields.io/badge/スターターキットを使う-→-brightgreen?style=for-the-badge)](https://ndai53.github.io/AI_Consul_StarterKit/)
 
 </div>
