@@ -11,7 +11,7 @@
 
 ## 🚀 デモ
 
-**👉 [https://ndai53.github.io/AI_Consulting_tool/](https://ndai53.github.io/AI_Consul_StarterKit/)**
+**👉 [https://ndai53.github.io/AI_Consul_StarterKit/](https://ndai53.github.io/AI_Consul_StarterKit/)**
 
 所要時間：約5〜8分 ／ 登録不要 ／ サーバー不要  
 入力データはブラウザにのみ保存されます（外部送信なし）
