@@ -1,4 +1,4 @@
-# 🤝 AIコンサル 壁打ちツール
+# 🚀 AIコンサル スターターキット
 
 > 19問に答えるだけで、AIコンサルの営業準備が**全部そろう**ウェブツール
 
@@ -21,10 +21,13 @@
 ## 📋 概要
 
 「AIコンサルを始めたいが、何から準備すればいいか分からない」という人が、  
-19問のヒアリングに答えるだけで**営業準備一式を自動生成**できるツールです。
+19問のヒアリングに答えるだけで**営業準備一式を自動生成**できるスターターキットです。
 
 スクールのテンプレをそのまま使うのではなく、  
 **あなたの経歴・スキル・目標に合わせてパーソナライズされた成果物**が出力されます。
+
+生成された資料はそのまま営業活動に使えるため、  
+**「準備完了」の状態で即スタート**できます。
 
 ---
 
@@ -125,7 +128,7 @@ AIスキルが「少し使ったことがある」以下の場合、
 ## 📂 ファイル構成
 
 ```
-AI_Consulting_tool/
+AI_Consulting_StarterKit/
 ├── index.html      # メインファイル（全機能を1ファイルに内包）
 │   ├── <style>     # CSS（変数・コンポーネント・アニメーション）
 │   ├── <body>      # HTML構造（全STEP + 成果物エリア）
@@ -173,8 +176,8 @@ MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
 
 <div align="center">
 
-**「AIが苦手な方こそ、このツールを使ってください。」**
+**「準備完了。あとは動くだけ。」**
 
-[![Use Tool](https://img.shields.io/badge/ツールを使う-→-brightgreen?style=for-the-badge)](https://ndai53.github.io/AI_Consulting_tool/)
+[![Use Tool](https://img.shields.io/badge/スターターキットを使う-→-brightgreen?style=for-the-badge)](https://ndai53.github.io/AI_Consulting_tool/)
 
 </div>
